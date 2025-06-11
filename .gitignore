@@ -1,0 +1,8 @@
+.rnd
+**/vendor/**/
+**/coverage/
+**/node_modules/
+**/.phpunit.cache
+**/debug.log
+**/coverage/*
+/wp-content/uploads/wc-logs/*
