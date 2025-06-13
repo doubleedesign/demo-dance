@@ -4,7 +4,30 @@ use Doubleedesign\Pricing\{ItemPricing};
 use Mockery;
 use WP_Mock;
 
-describe('Item pricing', function() {
+/**
+ * Utility function to reduce duplicate code in test cases and keep them concise and consistent
+ * This function arranges the necessary objects and values for the test case actions and assertions.
+ * @param float $regPrice - the regular price of the product
+ * @param float|null $salePrice - the sale price of the product, if set
+ * @param float|null $memberPrice - the member price of the product, if set
+ * @param string $productType - the type of product (simple or variable)
+ * @param bool $userIsMember - whether the current user is a member
+ */
+function arrange_item_pricing_unit_test_case(float $regPrice, ?float $salePrice, ?float $memberPrice, bool $userIsMember, string $productType = 'simple'): object {
+	// Arrange: Instantiate the class we're testing, a mock product, whether the current user is a member, and member price postmeta
+	$instance = new ItemPricing();
+	$product = MockProducts::create(['id' => 123, 'regular_price' => $regPrice, 'sale_price' => $salePrice, 'type' => $productType]);
+	MockUtils::mock_user_role_or_cap('member', $userIsMember);
+	$memberPricePostmetaSpy = MockUtils::mock_postmeta(123, '_member_price', $memberPrice);
+
+	return (object) [
+		'instance' => $instance,
+		'product' => $product,
+		'memberPricePostmetaSpy' => $memberPricePostmetaSpy
+	];
+}
+
+describe('Item pricing (unit)', function() {
 
 	beforeEach(function() {
 		WP_Mock::setUp();
@@ -16,51 +39,73 @@ describe('Item pricing', function() {
 		Mockery::close();
 	});
 
+	describe('Hook application', function() {
+
+		test('it should register the sale price function on the expected WooCommerce hook', function() {
+			$case = arrange_item_pricing_unit_test_case(25.00, 20.00, 17.50, true);
+
+			// Set up the expectation before creating the instance, because that's how WP_Mock works for some reason
+			WP_Mock::expectFilterAdded('woocommerce_product_get_sale_price', [Mockery::anyOf(ItemPricing::class), 'update_sale_price'], 10, 2);
+
+			// Create the instance so the constructor runs and applies the filter
+			$case->instance = new ItemPricing();
+		});
+
+		test('it should register the price calculation function on the expected WooCommerce hook', function() {
+			$case = arrange_item_pricing_unit_test_case(25.00, 20.00, 17.50, true);
+
+			// Set up the hooks expectation before creating the instances, because that's how WP_Mock works for some reason
+			WP_Mock::expectFilterAdded('woocommerce_product_get_price', [Mockery::anyOf(ItemPricing::class), 'calculate_item_price'], 10, 2);
+
+			// Create the instance so the constructor runs and adds the filter
+			$case->instance = new ItemPricing();
+		});
+
+		test('it should register the variable product price calculation function on the expected WooCommerce hook', function() {
+			$case = arrange_item_pricing_unit_test_case(25.00, 20.00, 17.50, true);
+
+			// Set up the hooks expectation before creating the instances, because that's how WP_Mock works for some reason
+			WP_Mock::expectActionAdded('woocommerce_product_read', [Mockery::anyOf(ItemPricing::class), 'calculate_item_price_variable'], 25, 2);
+
+			// Create the instance so the constructor runs and adds the filter
+			$case->instance = new ItemPricing();
+		});
+	});
+
 	describe('Sale price calculation', function() {
+		$regPrice = 25.00;
+		$salePrice = 20.00;
+		$memberPrice = 17.50;
 
-		test('it should maintain the sale price if the member price is lower but the user is not a member', function() {
-			$regPrice = 25.00;
-			$salePrice = 20.00;
-			$memberPrice = 17.50;
+		test('it should maintain the sale price if the member price is lower but the user is not a member', function() use ($salePrice, $memberPrice, $regPrice) {
+			// Arrange the scenario using the utility function
+			$case = arrange_item_pricing_unit_test_case($regPrice, $salePrice, $memberPrice, false);
 
-			// Instantiate the class here so it's after the mocks have been set up
-			$instance = new ItemPricing();
+			// Act: Run the function we're testing
+			$result = $case->instance->update_sale_price($salePrice, $case->product);
 
-			// Create a minimal mock of a product and the relevant post meta
-			$product = MockProducts::create(['id' => 123, 'regular_price' => $regPrice]);
-			MockUtils::mock_postmeta(123, '_member_price', $memberPrice);
-
-			// Mock the result of current_user_can for the member role
-			MockUtils::mock_user_role_or_cap('member', false);
-
-			// Run the function we're testing
-			$result = $instance->update_sale_price($salePrice, $product);
-
-			// TODO: Can we assert that get_post_meta was not called?
+			// Optional: Assert that the member price was not fetched
+			// Not really necessary for our fairly basic functionality,
+			// but may be useful in more complex situations where we want to ensure no unnecessary database calls are made
+			$case->memberPricePostmetaSpy->shouldNotHaveReceived('__invoke', [Mockery::any(), '_member_price', Mockery::any()]);
 
 			// Assert that the sale price has not changed
 			expect($result)->toBe($salePrice);
 		});
 
-		test('it should set the sale price to empty if the member price is cheaper', function() {
-			$regPrice = 25.00;
-			$salePrice = 20.00;
-			$memberPrice = 17.50;
+		test('it should set the sale price to empty if the member price is cheaper', function() use ($salePrice, $memberPrice, $regPrice) {
+			// Arrange the scenario using the utility function
+			$case = arrange_item_pricing_unit_test_case($regPrice, $salePrice, $memberPrice, true);
 
-			// Instantiate the class here so it's after the mocks have been set up
-			$instance = new ItemPricing();
+			// Act: run the function we're testing
+			$result = $case->instance->update_sale_price($salePrice, $case->product);
 
-			// Create a minimal mock of a product and the relevant post meta
-			$product = MockProducts::create(['id' => 123, 'regular_price' => $regPrice]);
-			MockUtils::mock_postmeta(123, '_member_price', $memberPrice);
+			// Optional: Assert that the member price was not fetched
+			// Not really necessary for our fairly basic functionality,
+			// but may be useful in more complex situations where we want to ensure no unnecessary database calls are made
+			$case->memberPricePostmetaSpy->shouldHaveReceived('__invoke', [Mockery::any(), '_member_price', Mockery::any()]);
 
-			// Mock the result of current_user_can for the member role
-			MockUtils::mock_user_role_or_cap('member', true);
-
-			// Run the function we're testing
-			$result = $instance->update_sale_price($salePrice, $product);
-
-			// Assert that the result is no sale price
+			// Assert that the sale price is empty
 			expect($result)->toBe("");
 		});
 	});
@@ -68,48 +113,26 @@ describe('Item pricing', function() {
 	describe('Final price calculation', function() {
 
 		describe('Member price is the same as the regular price, no sale price is set', function() {
+			$regPrice = 25.00;
+			$memberPrice = 25.00;
 
-			test('non-member gets regular price', function() {
-				$regPrice = 25.00;
-				$memberPrice = 25.00;
+			test('non-member gets regular price', function() use ($regPrice, $memberPrice) {
+				// Arrange the scenario using the utility function
+				$case = arrange_item_pricing_unit_test_case($regPrice, null, $memberPrice, false);
 
-				// Instantiate the class here so it's after the mocks have been set up
-				$instance = new ItemPricing();
-
-				// Create a minimal mock of a product and the relevant post meta
-				$product = MockProducts::create(['id' => 123, 'regular_price' => $regPrice]);
-				MockUtils::mock_postmeta(123, '_member_price', $memberPrice);
-
-				// Mock the result of current_user_can for the member role
-				MockUtils::mock_user_role_or_cap('member', false);
-
-				// Run the function we're testing
-				$result = $instance->calculate_item_price($regPrice, $product);
-
-				// TODO: Can we assert that get_post_meta was not called?
+				// Act: run the function we're testing
+				$result = $case->instance->calculate_item_price(25.00, $case->product);
 
 				// Assert that the regular price is returned
 				expect($result)->toBe($regPrice);
 			});
 
-			test('Member gets regular price', function() {
-				$regPrice = 25.00;
-				$memberPrice = 25.00;
+			test('Member gets regular price', function() use ($memberPrice, $regPrice) {
+				// Arrange the scenario using the utility function
+				$case = arrange_item_pricing_unit_test_case($regPrice, null, $memberPrice, true);
 
-				// Instantiate the class here so it's after the mocks have been set up
-				$instance = new ItemPricing();
-
-				// Create a minimal mock of a product and the relevant post meta
-				$product = MockProducts::create(['id' => 123, 'regular_price' => $regPrice]);
-				MockUtils::mock_postmeta(123, '_member_price', $memberPrice);
-
-				// Mock the result of current_user_can for the member role
-				MockUtils::mock_user_role_or_cap('member', true);
-
-				// Run the function we're testing
-				$result = $instance->calculate_item_price($regPrice, $product);
-
-				// TODO: Can we assert that get_post_meta was not called?
+				// Act: run the function we're testing
+				$result = $case->instance->calculate_item_price($regPrice, $case->product);
 
 				// Assert that the regular price is returned
 				expect($result)->toBe($regPrice);
@@ -117,46 +140,22 @@ describe('Item pricing', function() {
 		});
 
 		describe('Member price is lower than regular price, no sale price is set', function() {
+			$regPrice = 25.00;
+			$memberPrice = 20.00;
 
-			test('non-member gets regular price', function() {
-				$regPrice = 25.00;
-				$memberPrice = 20.00;
+			test('non-member gets regular price', function() use ($regPrice, $memberPrice) {
+				$case = arrange_item_pricing_unit_test_case($regPrice, null, $memberPrice, false);
 
-				// Instantiate the class here so it's after the mocks have been set up
-				$instance = new ItemPricing();
+				$result = $case->instance->calculate_item_price($regPrice, $case->product);
 
-				// Create a minimal mock of a product and the relevant post meta
-				$product = MockProducts::create(['id' => 123, 'regular_price' => $regPrice]);
-				MockUtils::mock_postmeta(123, '_member_price', $memberPrice);
-
-				// Mock the result of current_user_can for the member role
-				MockUtils::mock_user_role_or_cap('member', false);
-
-				// Run the function we're testing
-				$result = $instance->calculate_item_price($regPrice, $product);
-
-				// Assert that the regular price is returned
 				expect($result)->toBe($regPrice);
 			});
 
-			test('member gets member price', function() {
-				$regPrice = 25.00;
-				$memberPrice = 20.00;
+			test('member gets member price', function() use ($memberPrice, $regPrice) {
+				$case = arrange_item_pricing_unit_test_case($regPrice, null, $memberPrice, true);
 
-				// Instantiate the class here so it's after the mocks have been set up
-				$instance = new ItemPricing();
+				$result = $case->instance->calculate_item_price($regPrice, $case->product);
 
-				// Create a minimal mock of a product and the relevant post meta
-				$product = MockProducts::create(['id' => 123, 'regular_price' => $regPrice]);
-				MockUtils::mock_postmeta(123, '_member_price', $memberPrice);
-
-				// Mock the result of current_user_can for the member role
-				MockUtils::mock_user_role_or_cap('member', true);
-
-				// Run the function we're testing
-				$result = $instance->calculate_item_price($regPrice, $product);
-
-				// Assert that the member price is returned
 				expect($result)->toBe($memberPrice);
 			});
 		});
@@ -165,46 +164,22 @@ describe('Item pricing', function() {
 		// Assumption: Member prices should always be lower or equal to regular prices.
 		// What happens if the site admin accidentally updates a regular price and causes it to be lower than the member price?
 		describe('Member price is higher than regular price, no sale price is set', function() {
+			$regPrice = 25.00;
+			$memberPrice = 30.00;
 
-			test('non-member gets regular price', function() {
-				$regPrice = 25.00;
-				$memberPrice = 30.00;
-
-				// Instantiate the class here so it's after the mocks have been set up
-				$instance = new ItemPricing();
-
-				// Create a minimal mock of a product and the relevant post meta
-				$product = MockProducts::create(['id' => 123, 'regular_price' => $regPrice]);
-				MockUtils::mock_postmeta(123, '_member_price', $memberPrice);
-
-				// Mock the result of current_user_can for the member role
-				MockUtils::mock_user_role_or_cap('member', false);
-
-				// Run the function we're testing
-				$result = $instance->calculate_item_price($regPrice, $product);
+			test('non-member gets regular price', function() use ($memberPrice, $regPrice) {
+				$case = arrange_item_pricing_unit_test_case($regPrice, null, $memberPrice, false);
+				$result = $case->instance->calculate_item_price($regPrice, $case->product);
 
 				// Assert that the regular price is returned
 				expect($result)->toBe($regPrice);
 			});
 
-			test('member gets regular price', function() {
-				$regPrice = 25.00;
-				$memberPrice = 30.00;
+			test('member gets regular price', function() use ($regPrice, $memberPrice) {
+				$case = arrange_item_pricing_unit_test_case($regPrice, null, $memberPrice, true);
 
-				// Instantiate the class here so it's after the mocks have been set up
-				$instance = new ItemPricing();
+				$result = $case->instance->calculate_item_price($regPrice, $case->product);
 
-				// Create a minimal mock of a product and the relevant post meta
-				$product = MockProducts::create(['id' => 123, 'regular_price' => $regPrice]);
-				MockUtils::mock_postmeta(123, '_member_price', $memberPrice);
-
-				// Mock the result of current_user_can for the member role
-				MockUtils::mock_user_role_or_cap('member', true);
-
-				// Run the function we're testing
-				$result = $instance->calculate_item_price($regPrice, $product);
-
-				// Assert that the regular price is returned
 				expect($result)->toBe($regPrice);
 			});
 		});
@@ -215,36 +190,18 @@ describe('Item pricing', function() {
 			$memberPrice = 20.00;
 
 			test('non-member gets sale price', function() use ($regPrice, $salePrice, $memberPrice) {
-				$instance = new ItemPricing();
+				$case = arrange_item_pricing_unit_test_case($regPrice, $salePrice, $memberPrice, false);
 
-				// Create a minimal mock of a product and the relevant post meta
-				$product = MockProducts::create(['id' => 123, 'regular_price' => $regPrice]);
-				MockUtils::mock_postmeta(123, '_member_price', $memberPrice);
+				$result = $case->instance->calculate_item_price($salePrice, $case->product);
 
-				// Mock the result of current_user_can for the member role
-				MockUtils::mock_user_role_or_cap('member', false);
-
-				// Run the function we're testing
-				$result = $instance->calculate_item_price($salePrice, $product);
-
-				// Assert that the sale price is returned
 				expect($result)->toBe($salePrice);
 			});
 
 			test('member gets sale price', function() use ($regPrice, $salePrice, $memberPrice) {
-				$instance = new ItemPricing();
+				$case = arrange_item_pricing_unit_test_case($regPrice, $salePrice, $memberPrice, true);
 
-				// Create a minimal mock of a product and the relevant post meta
-				$product = MockProducts::create(['id' => 123, 'regular_price' => $regPrice]);
-				MockUtils::mock_postmeta(123, '_member_price', $memberPrice);
+				$result = $case->instance->calculate_item_price($salePrice, $case->product);
 
-				// Mock the result of current_user_can for the member role
-				MockUtils::mock_user_role_or_cap('member', true);
-
-				// Run the function we're testing
-				$result = $instance->calculate_item_price($salePrice, $product);
-
-				// Assert that the sale price is returned
 				expect($result)->toBe($salePrice);
 			});
 		});
@@ -255,36 +212,18 @@ describe('Item pricing', function() {
 			$memberPrice = 10.00;
 
 			test('non-member gets sale price', function() use ($regPrice, $salePrice, $memberPrice) {
-				$instance = new ItemPricing();
+				$case = arrange_item_pricing_unit_test_case($regPrice, $salePrice, $memberPrice, false);
 
-				// Create a minimal mock of a product and the relevant post meta
-				$product = MockProducts::create(['id' => 123, 'regular_price' => $regPrice]);
-				MockUtils::mock_postmeta(123, '_member_price', $memberPrice);
+				$result = $case->instance->calculate_item_price($salePrice, $case->product);
 
-				// Mock the result of current_user_can for the member role
-				MockUtils::mock_user_role_or_cap('member', false);
-
-				// Run the function we're testing
-				$result = $instance->calculate_item_price($salePrice, $product);
-
-				// Assert that the sale price is returned
 				expect($result)->toBe($salePrice);
 			});
 
 			test('member gets member price', function() use ($regPrice, $salePrice, $memberPrice) {
-				$instance = new ItemPricing();
+				$case = arrange_item_pricing_unit_test_case($regPrice, $salePrice, $memberPrice, true);
 
-				// Create a minimal mock of a product and the relevant post meta
-				$product = MockProducts::create(['id' => 123, 'regular_price' => $regPrice]);
-				MockUtils::mock_postmeta(123, '_member_price', $memberPrice);
+				$result = $case->instance->calculate_item_price($salePrice, $case->product);
 
-				// Mock the result of current_user_can for the member role
-				MockUtils::mock_user_role_or_cap('member', true);
-
-				// Run the function we're testing
-				$result = $instance->calculate_item_price($salePrice, $product);
-
-				// Assert that the member price is returned
 				expect($result)->toBe($memberPrice);
 			});
 		});
@@ -295,65 +234,106 @@ describe('Item pricing', function() {
 			$memberPrice = 15.00;
 
 			test('non-member gets sale price', function() use ($regPrice, $salePrice, $memberPrice) {
-				$instance = new ItemPricing();
+				$case = arrange_item_pricing_unit_test_case($regPrice, $salePrice, $memberPrice, false);
 
-				// Create a minimal mock of a product and the relevant post meta
-				$product = MockProducts::create(['id' => 123, 'regular_price' => $regPrice]);
-				MockUtils::mock_postmeta(123, '_member_price', $memberPrice);
+				$result = $case->instance->calculate_item_price($salePrice, $case->product);
 
-				// Mock the result of current_user_can for the member role
-				MockUtils::mock_user_role_or_cap('member', false);
-
-				// Run the function we're testing
-				$result = $instance->calculate_item_price($salePrice, $product);
-
-				// Assert that the sale price is returned
 				expect($result)->toBe($salePrice);
 			});
 
 			test('member gets member price', function() use ($regPrice, $salePrice, $memberPrice) {
-				$instance = new ItemPricing();
+				$case = arrange_item_pricing_unit_test_case($regPrice, $salePrice, $memberPrice, true);
 
-				// Create a minimal mock of a product and the relevant post meta
-				$product = MockProducts::create(['id' => 123, 'regular_price' => $regPrice]);
-				MockUtils::mock_postmeta(123, '_member_price', $memberPrice);
+				$result = $case->instance->calculate_item_price($salePrice, $case->product);
 
-				// Mock the result of current_user_can for the member role
-				MockUtils::mock_user_role_or_cap('member', true);
-
-				// Run the function we're testing
-				$result = $instance->calculate_item_price($salePrice, $product);
-
-				// Assert that the member price is returned
 				expect($result)->toBe($memberPrice);
 			});
 		});
 	});
 
-	describe('Hook application', function() {
+	describe('Variable product handling', function() {
+		$regPrice = 25.00;
+		$salePrice = 20.00;
+		$memberPrice = 17.50;
 
-		test('it should register the sale price function on the expected WooCommerce hook', function() {
-			// Set up the expectation before creating the instance, because that's how WP_Mock works for some reason
-			WP_Mock::expectFilterAdded('woocommerce_product_get_sale_price', [Mockery::anyOf(ItemPricing::class), 'update_sale_price'], 10, 2);
+		test('it should set the regular price', function() use ($regPrice) {
+			// Arrange the scenario using the utility function
+			$case = arrange_item_pricing_unit_test_case($regPrice, null, null, false, 'variable');
 
-			// Create the instance so the constructor runs and applies the filter
-			$instance = new ItemPricing();
+			// Act: run the function we're testing
+			$case->instance->calculate_item_price_variable(123, $case->product);
+
+			// Assert that the regular price is set
+			$case->product->shouldHaveReceived('set_regular_price')->with($regPrice);
 		});
 
-		test('it should register the price calculation function on the expected WooCommerce hook', function() {
-			// Set up the hooks expectation before creating the instances, because that's how WP_Mock works for some reason
-			WP_Mock::expectFilterAdded('woocommerce_product_get_price', [Mockery::anyOf(ItemPricing::class), 'calculate_item_price'], 10, 2);
+		test('it should set the price field to the regular price', function() use ($regPrice) {
+			// Arrange the scenario using the utility function
+			$case = arrange_item_pricing_unit_test_case($regPrice, null, null, false, 'variable');
 
-			// Create the instance so the constructor runs and adds the filter
-			$instance = new ItemPricing();
+			// Act: run the function we're testing
+			$case->instance->calculate_item_price_variable(123, $case->product);
+
+			// Assert that the price field is set to the regular price
+			$case->product->shouldHaveReceived('set_price')->with($regPrice);
 		});
 
-		test('it should register the variable product price calculation function on the expected WooCommerce hook', function() {
-			// Set up the hooks expectation before creating the instances, because that's how WP_Mock works for some reason
-			WP_Mock::expectActionAdded('woocommerce_product_read', [Mockery::anyOf(ItemPricing::class), 'calculate_item_price_variable'], 30, 2);
+		test('it should set the sale price', function() use ($regPrice, $salePrice) {
+			// Arrange the scenario using the utility function
+			$case = arrange_item_pricing_unit_test_case($regPrice, $salePrice, null, false, 'variable');
 
-			// Create the instance so the constructor runs and adds the filter
-			$instance = new ItemPricing();
+			// Act: run the function we're testing
+			$case->instance->calculate_item_price_variable(123, $case->product);
+
+			// Assert that the sale price is set
+			$case->product->shouldHaveReceived('set_sale_price')->with($salePrice);
+		});
+
+		test('it should set the price field to the sale price', function() use ($regPrice, $salePrice) {
+			// Arrange the scenario using the utility function
+			$case = arrange_item_pricing_unit_test_case($regPrice, $salePrice, null, false, 'variable');
+
+			// Act: run the function we're testing
+			$case->instance->calculate_item_price_variable(123, $case->product);
+
+			// Assert that the price field is set to the sale price
+			$case->product->shouldHaveReceived('set_price')->with($salePrice);
+		});
+
+		// At this point,coverage reporting was telling me everything was covered.
+		// However, I am not convinced of that because we are not actually testing member pricing on variable products.
+		// At the time of writing, the calculate_item_price_variable method calls the calculate_item_price method, which has its own tests below.
+		// What if that changes in the future? How can we prevent a change from breaking member pricing?
+		// In our case, the integration tests would pick it up, but what if we didn't have those?
+		// We have two options here: Directly test for member price + variable product, or assert that the calculate_item_price method is called.
+		// The latter is testing an implementation detail and is brittle; the implementation could change and the test would fail, but the functionality could still be correct.
+		// So even though it's more verbose, adding a couple of tests for member price + variable product is the more robust option.
+		describe('user is a member and there is a member price', function() {
+			$regPrice = 25.00;
+			$salePrice = 22.00;
+			$memberPrice = 20.00;
+
+			test('it sets the price to the member price if it is lower than the regular price', function() use ($regPrice, $memberPrice) {
+				// Arrange the scenario using the utility function
+				$case = arrange_item_pricing_unit_test_case($regPrice, null, $memberPrice, true, 'variable');
+
+				// Act: run the function we're testing
+				$case->instance->calculate_item_price_variable(123, $case->product);
+
+				// Assert that the price field is set to the member price
+				$case->product->shouldHaveReceived('set_price')->with($memberPrice);
+			});
+
+			test('it sets the price to the member price if it is lower than the sale price', function() use ($salePrice, $regPrice, $memberPrice) {
+				// Arrange the scenario using the utility function
+				$case = arrange_item_pricing_unit_test_case($regPrice, $salePrice, $memberPrice, true, 'variable');
+
+				// Act: run the function we're testing
+				$case->instance->calculate_item_price_variable(123, $case->product);
+
+				// Assert that the price field is set to the member price
+				$case->product->shouldHaveReceived('set_price')->with($memberPrice);
+			});
 		});
 	});
 });

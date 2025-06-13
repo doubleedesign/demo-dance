@@ -1,0 +1,11 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="ItemPricing (integration)" type="PestRunConfigurationType">
+    <option name="pestRunnerSettings">
+      <PestRunner file="$PROJECT_DIR$/wp-content/plugins/demo-custom-pricing/__tests__/integration/ItemPricingTest.php" method="`Item pricing (unit)` → " scope="Method" options="--coverage-html coverage/integration" />
+    </option>
+    <option name="runnerSettings">
+      <PhpTestRunnerSettings file="$PROJECT_DIR$/wp-content/plugins/demo-custom-pricing/__tests__/integration/ItemPricingTest.php" method="`Item pricing (unit)` → " scope="Method" options="--coverage-html coverage/integration" />
+    </option>
+    <method v="2" />
+  </configuration>
+</component>

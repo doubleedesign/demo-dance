@@ -6,7 +6,7 @@ class ItemPricing {
 	public function __construct() {
 		add_filter('woocommerce_product_get_sale_price', [$this, 'update_sale_price'], 10, 2);
 		add_filter('woocommerce_product_get_price', [$this, 'calculate_item_price'], 10, 2);
-		add_action('woocommerce_product_read', [$this, 'calculate_item_price_variable'], 30, 2);
+		add_action('woocommerce_product_read', [$this, 'calculate_item_price_variable'], 25, 2);
 	}
 
 	/**
@@ -71,10 +71,20 @@ class ItemPricing {
 			$regular_price = get_post_meta($post_id, '_regular_price', true);
 			$sale_price = get_post_meta($post_id, '_sale_price', true);
 
-			$lower_price = min($regular_price, $sale_price);
+			$product->set_regular_price($regular_price);
+			$product->set_sale_price($sale_price);
 
-			$price = $this->calculate_item_price($lower_price, $product);
-			$product->set_price($price);
+			// If there is a sale price, use that to calculate the final price
+			if(floatval($sale_price) > 0) {
+				$lower_price = min($regular_price, $sale_price);
+				$price = $this->calculate_item_price($lower_price, $product);
+				$product->set_price($price);
+			}
+			// Otherwise, use the regular price to calculate the final price
+			else {
+				$price = $this->calculate_item_price($regular_price, $product);
+				$product->set_price($price);
+			}
 		}
 	}
 

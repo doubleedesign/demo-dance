@@ -1,0 +1,11 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Unit + Integration" type="PestRunConfigurationType">
+    <option name="pestRunnerSettings">
+      <PestRunner directory="$PROJECT_DIR$/wp-content/plugins/demo-custom-pricing/__tests__/" method="" options="--coverage-html coverage/combo" />
+    </option>
+    <option name="runnerSettings">
+      <PhpTestRunnerSettings directory="$PROJECT_DIR$/wp-content/plugins/demo-custom-pricing/__tests__/" method="" options="--coverage-html coverage/combo" />
+    </option>
+    <method v="2" />
+  </configuration>
+</component>

@@ -1,5 +1,7 @@
 <?php
 namespace Doubleedesign\Pricing\Tests\Unit;
+use Mockery;
+use Mockery\MockInterface;
 use WP_Mock;
 
 class MockUtils {
@@ -20,16 +22,22 @@ class MockUtils {
 
 	/**
 	 * Shortcut function to mock the get_post_meta function to return the value for the given key
+	 * Returns a spy so we can assert stuff about the function call itself
 	 * @param $post_id
 	 * @param $key
 	 * @param $value
-	 * @return void
+	 * @return MockInterface
 	 */
-	public static function mock_postmeta($post_id, $key, $value): void {
-		WP_Mock::userFunction('get_post_meta', [
-			'args' => [$post_id, $key, true],
-			'return' => $value
-		]);
+	public static function mock_postmeta($post_id, $key, $value): MockInterface {
+		$postmetaSpy = Mockery::spy(function($id, $meta_key, $single = true) use ($post_id, $key, $value) {
+			if ($meta_key === $key && $id === $post_id) {
+				return $value;
+			}
+			return null; // Return null for any other key
+		});
+		WP_Mock::alias('get_post_meta', $postmetaSpy);
+
+		return $postmetaSpy;
 	}
 
 	/**
