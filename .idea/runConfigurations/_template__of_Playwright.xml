@@ -1,0 +1,11 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="true" type="JavaScriptTestRunnerPlaywright">
+    <config value="$PROJECT_DIR$/wp-content/plugins/demo-custom-pricing/playwright.config.ts" />
+    <node-interpreter value="project" />
+    <playwright-package value="$PROJECT_DIR$/wp-content/plugins/demo-custom-pricing/node_modules/@playwright/test" />
+    <working-dir value="$PROJECT_DIR$/wp-content/plugins/demo-custom-pricing" />
+    <envs />
+    <scope-kind value="TEST_FILE" />
+    <method v="2" />
+  </configuration>
+</component>

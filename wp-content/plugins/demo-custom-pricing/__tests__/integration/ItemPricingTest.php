@@ -60,7 +60,7 @@ describe('Item pricing (integration)', function()  {
 
 			// First, we should check that this product meets our test case criteria in case anyone has messed with the test data
 			expect($data->member_price)->toBeLessThanOrEqual($data->price)
-				// Then assert that the sale price is empty for members and on-sale status is false for them (so they won't see the "on sale" badge)
+				// Then assert that the sale price is empty for members and on-sale status is false for them (so they shouldn't see the "on sale" badge)
 				->and($data->sale_price)->toBeEmpty()
 				->and($data->is_on_sale)->toBeFalse();
 		});

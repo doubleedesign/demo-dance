@@ -26,7 +26,7 @@
 		</span>
 	@endif
 
-	@if($customer_pricing_group && !$is_on_sale && ($regular_price !== $current_price))
+	@if($customer_pricing_group && !$is_on_sale && ($regular_price != $current_price))
 		{{-- aria-hidden here is so that screen reader users don't get a double announcement --}}
         <span class="woocommerce-price__custom-badge woocommerce-price__custom-badge--{{ $customer_pricing_group }}" aria-hidden="true">
             {{ __(sprintf("%s price", $customer_pricing_group), 'demo-custom-pricing') }}

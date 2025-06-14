@@ -1,0 +1,18 @@
+{
+	"name": "demo-custom-pricing",
+	"description": "A plugin to demo implementing and testing complex pricing rules in WooCommerce",
+	"version": "0.0.1",
+	"type": "module",
+	"authors": [
+		{
+			"name": "Leesa Ward",
+			"email": "leesa@doubleedesign.com.au"
+		}
+	],
+	"devDependencies": {
+		"@playwright/test": "^1.53.0",
+		"@types/node": "^24.0.1",
+		"dotenv": "^16.5.0",
+		"typescript": "^5.8.3"
+	}
+}

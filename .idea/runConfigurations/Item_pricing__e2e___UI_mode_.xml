@@ -1,0 +1,16 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Item pricing (e2e) (UI mode)" type="JavaScriptTestRunnerPlaywright">
+    <config value="$PROJECT_DIR$/wp-content/plugins/demo-custom-pricing/playwright.config.ts" />
+    <node-interpreter value="project" />
+    <playwright-package value="$PROJECT_DIR$/wp-content/plugins/demo-custom-pricing/node_modules/@playwright/test" />
+    <working-dir value="$PROJECT_DIR$/wp-content/plugins/demo-custom-pricing" />
+    <cli-options value="--ui" />
+    <envs />
+    <scope-kind value="SUITE" />
+    <test-file value="$PROJECT_DIR$/wp-content/plugins/demo-custom-pricing/__tests__/e2e/item-pricing.spec.ts" />
+    <test-names>
+      <test-name value="Item pricing (e2e)" />
+    </test-names>
+    <method v="2" />
+  </configuration>
+</component>
