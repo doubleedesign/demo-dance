@@ -1,0 +1,11 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="true" type="PestRunConfigurationType">
+    <option name="pestRunnerSettings">
+      <PestRunner method="" options="--coverage-html coverage/unit" />
+    </option>
+    <option name="runnerSettings">
+      <PhpTestRunnerSettings method="" options="--coverage-html coverage/unit" />
+    </option>
+    <method v="2" />
+  </configuration>
+</component>
