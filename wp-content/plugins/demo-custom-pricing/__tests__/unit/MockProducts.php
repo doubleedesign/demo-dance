@@ -13,6 +13,7 @@ class MockProducts {
 			'sale_price'    => null,
 			'type'          => 'simple',
 			'stock_status'  => 'instock',
+			'is_on_sale'    => false,
 		];
 
 		$attrs = array_merge($defaults, $attributes);
@@ -34,6 +35,7 @@ class MockProducts {
 		$product->shouldReceive('is_type')->with('simple')->andReturn($attrs['type'] === 'simple');
 		$product->shouldReceive('get_regular_price')->andReturn($attrs['regular_price']);
 		$product->shouldReceive('get_sale_price')->andReturn($attrs['sale_price']);
+		$product->shouldReceive('is_on_sale')->andReturn(!empty($attrs['sale_price'] || $attrs['is_on_sale']));
 		$product->shouldReceive('set_regular_price');
 		$product->shouldReceive('set_sale_price');
 		$product->shouldReceive('set_price');

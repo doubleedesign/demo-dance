@@ -26,7 +26,8 @@ function run_item_pricing_integration_test_case(string $userEnvPrefix, int $prod
 		'price' => $data['price'], // default WC field that uses regular and sale prices to work out the current basic price
 		'regular_price' => $data['regular_price'],
 		'sale_price' => $data['sale_price'],
-		'member_price' => array_find($data['meta_data'], fn($meta) => $meta['key'] === '_member_price')['value'] ?? null
+		'member_price' => array_find($data['meta_data'], fn($meta) => $meta['key'] === '_member_price')['value'] ?? null,
+		'is_on_sale' => $data['on_sale'], // default WC field that uses regular and sale prices to determine if the product is on sale
 	];
 }
 
@@ -45,10 +46,10 @@ describe('Item pricing (integration)', function()  {
 			);
 
 			// First, we should check that this product meets our test case criteria in case anyone has messed with the test data
-			expect($data->member_price)->toBeLessThan($data->price);
-
-			// Then assert that the final price this customer will receive is the sale price
-			expect($data->price)->toBe($data->sale_price);
+			expect($data->member_price)->toBeLessThan($data->price)
+				// Then assert that the final price this customer will receive is the sale price and the on-sale status is correct
+				->and($data->price)->toBe($data->sale_price)
+				->and($data->is_on_sale)->toBeTrue();
 		});
 
 		test('it should set the sale price to empty for a member if the member price is lower', function() {
@@ -58,10 +59,10 @@ describe('Item pricing (integration)', function()  {
 			);
 
 			// First, we should check that this product meets our test case criteria in case anyone has messed with the test data
-			expect($data->member_price)->toBeLessThanOrEqual($data->price);
-
-			// Then assert that the sale price is empty for members
-			expect($data->sale_price)->toBeEmpty();
+			expect($data->member_price)->toBeLessThanOrEqual($data->price)
+				// Then assert that the sale price is empty for members and on-sale status is false for them (so they won't see the "on sale" badge)
+				->and($data->sale_price)->toBeEmpty()
+				->and($data->is_on_sale)->toBeFalse();
 		});
 
 		test('it should maintain the sale price for a member if the member price is higher', function() {
@@ -71,10 +72,10 @@ describe('Item pricing (integration)', function()  {
 			);
 
 			// Confirm that the criteria for the test case were actually met by the given product
-			expect($data->member_price)->toBeGreaterThan($data->price);
-
-			// Then assert the result we're looking at is correct
-			expect($data->sale_price)->toBe($data->price);
+			expect($data->member_price)->toBeGreaterThan($data->price)
+				// Then assert the result we're looking at is correct
+				->and($data->sale_price)->toBe($data->price)
+				->and($data->is_on_sale)->toBeTrue();
 		});
 
 		test('it should maintain the member price for a member if it is equal to the sale price', function() {
@@ -84,10 +85,10 @@ describe('Item pricing (integration)', function()  {
 			);
 
 			// Confirm that the criteria for the test case were actually met by the given product
-			expect($data->member_price)->toBe($data->sale_price);
-
-			// Then assert that the member price is maintained for members
-			expect($data->price)->toBe($data->member_price);
+			expect($data->sale_price)->toBeEmpty()
+				// Then assert that the member price is maintained for members
+				->and($data->price)->toBe($data->member_price)
+				->and($data->is_on_sale)->toBeFalse();
 		});
 	});
 
@@ -102,10 +103,9 @@ describe('Item pricing (integration)', function()  {
 				);
 
 				// Confirm that the criteria for the test case were actually met by the given product
-				expect($data->member_price)->toBeLessThan($data->regular_price);
-
-				// Then assert that the non-member gets the regular price
-				expect($data->price)->toBe($data->regular_price);
+				expect($data->member_price)->toBeLessThan($data->regular_price)
+					// Then assert that the non-member gets the regular price
+					->and($data->price)->toBe($data->regular_price);
 			});
 
 			test('member gets member price', function() {
@@ -115,10 +115,9 @@ describe('Item pricing (integration)', function()  {
 				);
 
 				// Confirm that the criteria for the test case were actually met by the given product
-				expect($data->member_price)->toBeLessThanOrEqual($data->regular_price);
-
-				// Then assert that the member gets the member price
-				expect($data->price)->toBe($data->member_price);
+				expect($data->member_price)->toBeLessThanOrEqual($data->regular_price)
+					// Then assert that the member gets the member price
+					->and($data->price)->toBe($data->member_price);
 			});
 		});
 
@@ -134,10 +133,10 @@ describe('Item pricing (integration)', function()  {
 				);
 
 				// Confirm that the criteria for the test case were actually met by the given product
-				expect($data->member_price)->toBeGreaterThan($data->regular_price);
-
-				// Then assert that the non-member gets the regular price
-				expect($data->price)->toBe($data->regular_price);
+				expect($data->member_price)->toBeGreaterThan($data->regular_price)
+					// Then assert that the non-member gets the regular price and the product does not show as on sale
+					->and($data->price)->toBe($data->regular_price)
+					->and($data->is_on_sale)->toBeFalse();
 			});
 
 			test('member gets regular price', function() {
@@ -147,10 +146,10 @@ describe('Item pricing (integration)', function()  {
 				);
 
 				// Confirm that the criteria for the test case were actually met by the given product
-				expect($data->member_price)->toBeGreaterThan($data->regular_price);
-
-				// Then assert that the member gets the regular price
-				expect($data->price)->toBe($data->regular_price);
+				expect($data->member_price)->toBeGreaterThan($data->regular_price)
+					// Then assert that the member gets the regular price and the product does not show as on sale
+					->and($data->price)->toBe($data->regular_price)
+					->and($data->is_on_sale)->toBeFalse();
 			});
 		});
 
@@ -163,11 +162,10 @@ describe('Item pricing (integration)', function()  {
 				);
 
 				// Confirm that the criteria for the test case were actually met by the given product
-				expect($data->member_price)->toBeGreaterThan($data->sale_price);
-
-				// Then assert that the non-member gets the sale price
-				expect($data->price)->toBe($data->sale_price);
-
+				expect($data->member_price)->toBeGreaterThan($data->sale_price)
+					// Then assert that the non-member gets the sale price and the product shows as on sale
+					->and($data->price)->toBe($data->sale_price)
+					->and($data->is_on_sale)->toBeTrue();
 			});
 
 			test('member gets sale price', function() {
@@ -177,10 +175,10 @@ describe('Item pricing (integration)', function()  {
 				);
 
 				// Confirm that the criteria for the test case were actually met by the given product
-				expect($data->member_price)->toBeGreaterThan($data->sale_price);
-
-				// Then assert that the member gets the sale price
-				expect($data->price)->toBe($data->sale_price);
+				expect($data->member_price)->toBeGreaterThan($data->sale_price)
+					// Then assert that the non-member gets the sale price and the product shows as on sale
+					->and($data->price)->toBe($data->sale_price)
+					->and($data->is_on_sale)->toBeTrue();
 			});
 		});
 
@@ -193,10 +191,10 @@ describe('Item pricing (integration)', function()  {
 				);
 
 				// Confirm that the criteria for the test case were actually met by the given product
-				expect($data->member_price)->toBeLessThan($data->sale_price);
-
-				// Then assert that the non-member gets the sale price
-				expect($data->price)->toBe($data->sale_price);
+				expect($data->member_price)->toBeLessThan($data->sale_price)
+					// Then assert that the non-member gets the sale price and the product shows as on sale
+					->and($data->price)->toBe($data->sale_price)
+					->and($data->is_on_sale)->toBeTrue();
 			});
 
 			test('member gets member price', function() {
@@ -207,10 +205,10 @@ describe('Item pricing (integration)', function()  {
 
 				// Confirm that the criteria for the test case were actually met by the given product
 				expect($data->member_price)->not->toBeEmpty()
-					->and($data->sale_price)->toBeEmpty();
-
-				// Then assert that the member gets the member price
-				expect($data->price)->toBe($data->member_price);
+					->and($data->sale_price)->toBeEmpty()
+					// Then assert that the member gets the member price and the product does not show as on sale
+					->and($data->price)->toBe($data->member_price)
+					->and($data->is_on_sale)->toBeFalse();
 			});
 		});
 	});
