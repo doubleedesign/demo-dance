@@ -5,4 +5,6 @@
 **/.phpunit.cache
 **/debug.log
 **/coverage/*
+**/test-results/*
 /wp-content/uploads/wc-logs/*
+**/cache/*

@@ -1,0 +1,31 @@
+.woocommerce-price {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  line-height: 1;
+}
+.woocommerce-price > del, .woocommerce-price > ins, .woocommerce-price > span {
+  display: flex;
+  white-space: nowrap;
+}
+.woocommerce-price del {
+  color: color-mix(in srgb, currentColor, transparent 60%);
+  font-size: 0.875em;
+}
+.woocommerce-price ins {
+  text-decoration: none;
+}
+.woocommerce-price__custom-badge {
+  display: inline-block;
+  margin-inline: 0.25em;
+  white-space: nowrap;
+  background: var(--wc-highlight);
+  color: var(--wc-highligh-text);
+  padding: 0.25em 0.5em;
+  box-sizing: border-box;
+  font-size: 0.75em;
+}
+
+/*# sourceMappingURL=style.css.map */

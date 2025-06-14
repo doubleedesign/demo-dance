@@ -10,7 +10,9 @@
 		}
 	],
 	"require": {
-		"php": ">=8.2"
+		"php": ">=8.2",
+		"illuminate/view": "^12.18"
+
 	},
 	"autoload": {
 		"psr-4": {
@@ -20,7 +22,8 @@
 	"autoload-dev": {
 		"psr-4": {
 			"Doubleedesign\\Pricing\\Tests\\Unit\\": "__tests__/unit",
-			"Doubleedesign\\Pricing\\Tests\\Integration\\": "__tests__/integration"
+			"Doubleedesign\\Pricing\\Tests\\Integration\\": "__tests__/integration",
+			"Doubleedesign\\Pricing\\Tests\\Component\\": "__tests__/component"
 		}
 	},
 	"require-dev": {

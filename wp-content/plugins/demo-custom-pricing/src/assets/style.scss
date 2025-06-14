@@ -1,0 +1,43 @@
+.woocommerce-price {
+	display: inline-flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5em;
+	line-height: 1;
+
+	> del, > ins, > span {
+		display: flex; // eliminates extra whitespace between spans
+		white-space: nowrap; // prevent the spans going onto separate lines
+	}
+
+	del {
+		color: color-mix(in srgb, currentColor, transparent 60%);
+		font-size: 0.875em;
+	}
+
+	ins {
+		text-decoration: none;
+	}
+
+	&__currency-symbol {
+	}
+
+	&__amount {
+	}
+
+	&__custom-badge {
+		display: inline-block;
+		margin-inline: 0.25em;
+		white-space: nowrap;
+		background: var(--wc-highlight);
+		color: var(--wc-highligh-text); // their typo not mine
+		padding: 0.25em 0.5em;
+		box-sizing: border-box;
+		font-size: 0.75em;
+
+		// Different colours for different roles could go here
+		&--member {
+		}
+	}
+}
