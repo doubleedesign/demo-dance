@@ -23,7 +23,7 @@ class FrontendDisplay extends BladeViewFactory {
 		parent::__construct($resolver, $viewFinder, new Dispatcher());
 
 		add_filter('woocommerce_get_price_html', [$this, 'get_custom_price_display_html'], 100, 2);
-		add_filter('woocommerce_sale_flash', [$this, 'get_custom_sale_badge_html'], 10, 2);
+		add_filter('woocommerce_sale_flash', [$this, 'get_custom_sale_badge_html'], 20, 2);
 		add_action('wp_enqueue_scripts', [$this, 'enqueue_default_css'], 20);
 		add_action('enqueue_block_assets', [$this, 'enqueue_default_css'], 50);
 	}

@@ -49,6 +49,8 @@ describe('Item pricing (unit)', function() {
 
 			// Create the instance so the constructor runs and applies the filter
 			$case->instance = new ItemPricing();
+
+			WP_Mock::assertHooksAdded();
 		});
 
 		test('it should register the price calculation function on the expected WooCommerce hook', function() {
@@ -59,6 +61,8 @@ describe('Item pricing (unit)', function() {
 
 			// Create the instance so the constructor runs and adds the filter
 			$case->instance = new ItemPricing();
+
+			WP_Mock::assertHooksAdded();
 		});
 
 		test('it should register the variable product price calculation function on the expected WooCommerce hook', function() {
@@ -69,6 +73,8 @@ describe('Item pricing (unit)', function() {
 
 			// Create the instance so the constructor runs and adds the filter
 			$case->instance = new ItemPricing();
+
+			WP_Mock::assertHooksAdded();
 		});
 	});
 
